@@ -3,6 +3,7 @@
 import { useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useState } from "react";
 import { UserSettings, FilamentType, CalculationParams } from "@/types";
 import { ChevronDown } from "lucide-react";
 
@@ -60,18 +61,44 @@ const inputCls =
 const section =
   "bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4";
 
+function parsePrintTime(value: string): { hours: number; minutes: number } | null {
+  const trimmed = value.trim();
+  if (!trimmed) return { hours: 0, minutes: 0 };
+  const parts = trimmed.split(",");
+  if (parts.length === 1) {
+    const h = parseFloat(parts[0]);
+    if (isNaN(h) || h < 0) return null;
+    return { hours: Math.floor(h), minutes: Math.round((h % 1) * 60) };
+  }
+  if (parts.length === 2) {
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    if (isNaN(h) || isNaN(m) || h < 0 || m < 0 || m > 59) return null;
+    return { hours: h, minutes: m };
+  }
+  return null;
+}
+
 export function CalculatorForm({ defaultValues, settings, onCalculate }: Props) {
+  const initH = defaultValues?.printTimeHours ?? 0;
+  const initM = defaultValues?.printTimeMinutes ?? 0;
+  const [printTimeStr, setPrintTimeStr] = useState(
+    initH === 0 && initM === 0 ? "" : `${initH},${initM}`
+  );
+  const [printTimeError, setPrintTimeError] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<CalculatorFormData>({
     resolver: zodResolver(schema) as Resolver<CalculatorFormData>,
     defaultValues: {
       cantidad: 1,
-      printTimeHours: 0,
-      printTimeMinutes: 0,
+      printTimeHours: initH,
+      printTimeMinutes: initM,
       filamentType: "PLA",
       printerWatts: settings.printerWatts,
       electricityPrice: settings.electricityPrice,
@@ -87,8 +114,19 @@ export function CalculatorForm({ defaultValues, settings, onCalculate }: Props) 
 
   const filamentType = watch("filamentType");
 
+  function handleFormSubmit(data: CalculatorFormData) {
+    const parsed = parsePrintTime(printTimeStr);
+    if (parsed === null) {
+      setPrintTimeError("Formato inválido. Ej: 10,30 (horas,minutos)");
+      return;
+    }
+    data.printTimeHours = parsed.hours;
+    data.printTimeMinutes = parsed.minutes;
+    onCalculate(data);
+  }
+
   return (
-    <form onSubmit={handleSubmit(onCalculate)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       {/* Básicos */}
       <div className={section}>
         <h2 className="font-semibold text-gray-900 dark:text-white">🧩 Datos del producto</h2>
@@ -102,16 +140,30 @@ export function CalculatorForm({ defaultValues, settings, onCalculate }: Props) 
           <Field label="Cantidad (unidades)" error={errors.cantidad?.message}>
             <input {...register("cantidad")} type="number" min="1" placeholder="1" className={inputCls} />
           </Field>
-          <Field label="Tiempo por unidad" error={errors.printTimeHours?.message}>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <input {...register("printTimeHours")} type="number" min="0" placeholder="0" className={inputCls} />
-                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">h</span>
-              </div>
-              <div className="relative flex-1">
-                <input {...register("printTimeMinutes")} type="number" min="0" max="59" placeholder="0" className={inputCls} />
-                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">min</span>
-              </div>
+          <Field label="Tiempo por unidad" error={printTimeError ?? undefined}>
+            <div className="relative">
+              <input
+                type="text"
+                inputMode="decimal"
+                value={printTimeStr}
+                placeholder="10,30"
+                className={inputCls + " pr-14"}
+                onChange={(e) => {
+                  setPrintTimeStr(e.target.value);
+                  setPrintTimeError(null);
+                }}
+                onBlur={(e) => {
+                  const parsed = parsePrintTime(e.target.value);
+                  if (parsed === null) {
+                    setPrintTimeError("Formato inválido. Ej: 10,30 (horas,minutos)");
+                  } else {
+                    setValue("printTimeHours", parsed.hours);
+                    setValue("printTimeMinutes", parsed.minutes);
+                    setPrintTimeError(null);
+                  }
+                }}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">h,min</span>
             </div>
           </Field>
         </div>
