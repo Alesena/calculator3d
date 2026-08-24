@@ -1,5 +1,12 @@
 export type FilamentType = "PLA" | "PETG" | "ABS" | "TPU" | "Resina" | "Otro";
 
+export interface Category {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface CalculationParams {
   cantidad: number;
   printTimeHours: number;
@@ -44,6 +51,9 @@ export interface Product {
   id: string;
   name: string;
   description?: string;
+  // Los productos guardados antes de que existieran las categorías no lo
+  // tienen: undefined significa "Sin categoría", no un dato faltante.
+  categoryId?: string;
   createdAt: Date;
   updatedAt: Date;
   // Params
@@ -70,6 +80,13 @@ export interface Product {
   month: number;
   year: number;
 }
+
+/** Lo que se manda a Firestore al crear/editar: params + metadatos del producto. */
+export type ProductInput = CalculationParams & {
+  name: string;
+  description?: string;
+  categoryId?: string;
+};
 
 export interface UserSettings {
   electricityPrice: number;
