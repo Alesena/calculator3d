@@ -6,7 +6,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { AppShell } from "@/components/layout/AppShell";
 import { ProductCard } from "@/components/products/ProductCard";
 import { ProductCardSkeleton, StatCardSkeleton } from "@/components/ui/Skeleton";
-import { formatARS, formatHours } from "@/lib/calculations";
+import { formatARS, formatDecimalHours } from "@/lib/calculations";
 import { Plus } from "lucide-react";
 
 export default function DashboardPage() {
@@ -59,7 +59,7 @@ export default function DashboardPage() {
               <StatCard label="Productos" value={String(stats.total)} />
               <StatCard
                 label="Tiempo total"
-                value={formatHours(Math.floor(stats.totalHours), Math.round((stats.totalHours % 1) * 60))}
+                value={formatDecimalHours(stats.totalHours)}
               />
               <StatCard label="Material usado" value={`${stats.totalMaterial.toFixed(2)} kg`} />
               <StatCard label="Precio promedio" value={formatARS(stats.avgPrice)} />

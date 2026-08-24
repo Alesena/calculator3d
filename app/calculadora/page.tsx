@@ -57,6 +57,8 @@ function CalculadoraContent() {
           vidaUtilHoras: p.vidaUtilHoras,
           precioRepuestos: p.precioRepuestos,
           packaging: p.packaging,
+          laborCostPerHour: p.laborCostPerHour,
+          postProcessMinutes: p.postProcessMinutes,
           margenErrorPct: p.margenErrorPct,
           profitPercentage: p.profitPercentage,
           shippingCost: p.shippingCost,

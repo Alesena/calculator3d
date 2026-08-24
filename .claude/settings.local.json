@@ -2,7 +2,26 @@
   "permissions": {
     "allow": [
       "Bash(tree:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(Get-ChildItem -Path \"D:\\\\Proyectos\\\\front\\\\calculator3d\" -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(python \"C:\\\\Users\\\\aguan\\\\.claude\\\\skills\\\\ui-ux-pro-max\\\\scripts\\\\search.py\" \"3D printing tool importer drag-drop file upload technical dark\" --design-system -p \"ImpriCost 3MF\" -f markdown)",
+      "Bash(python -c ' *)",
+      "Bash(python3 \"C:\\\\Users\\\\aguan\\\\.claude\\\\skills\\\\ui-ux-pro-max\\\\scripts\\\\search.py\" \"3D printing tool importer drag-drop file upload technical\" --design-system -p \"ImpriCost 3MF\" -f markdown)",
+      "Bash(python3 -c ' *)",
+      "Bash(where python3.exe)",
+      "Bash(where python.exe)",
+      "Read(//usr/local/**)",
+      "Read(//usr/**)",
+      "Bash(node -e ' *)",
+      "Bash(npm list *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "WebFetch(domain:localhost)",
+      "Bash(npx tsc *)",
+      "Bash(netstat -tlnp)",
+      "Bash(claude update *)"
     ]
   }
 }

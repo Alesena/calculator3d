@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# muestras .3mf/.gcode originales (los tests usan copias recortadas en tests/fixtures/)
+/Bambu lab a1/
+/Snapmaker U1/

@@ -18,6 +18,8 @@ const schema = z.object({
   precioRepuestos: z.coerce.number().min(0),
   margenErrorPct: z.coerce.number().min(0).max(100),
   packaging: z.coerce.number().min(0),
+  laborCostPerHour: z.coerce.number().min(0),
+  postProcessMinutes: z.coerce.number().min(0),
 });
 
 const inputCls =
@@ -29,6 +31,8 @@ const fields: { key: Extract<keyof UserSettings, string>; label: string; unit: s
   { key: "vidaUtilHoras", label: "Vida útil de la impresora", unit: "h", placeholder: "4320" },
   { key: "precioRepuestos", label: "Costo total de repuestos/mantenimiento", unit: "$", placeholder: "15000" },
   { key: "packaging", label: "Packaging por unidad", unit: "$/ud", placeholder: "2300" },
+  { key: "laborCostPerHour", label: "Costo de tu hora de trabajo", unit: "$/h", placeholder: "8000" },
+  { key: "postProcessMinutes", label: "Post-proceso por unidad", unit: "min", placeholder: "10" },
   { key: "margenErrorPct", label: "Margen de error predeterminado", unit: "%", placeholder: "10" },
   { key: "profitPercentage", label: "Margen de ganancia predeterminado", unit: "%", placeholder: "30" },
 ];
@@ -66,7 +70,7 @@ export default function ConfiguracionPage() {
 
           {loading ? (
             <div className="space-y-3">
-              {Array.from({ length: 7 }).map((_, i) => (
+              {Array.from({ length: 9 }).map((_, i) => (
                 <div key={i} className="h-10 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse" />
               ))}
             </div>

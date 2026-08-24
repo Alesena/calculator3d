@@ -1,5 +1,5 @@
 import { CalculatedPrices } from "@/types";
-import { formatARS } from "@/lib/calculations";
+import { formatARS, formatDecimalHours } from "@/lib/calculations";
 
 interface Props {
   prices: CalculatedPrices;
@@ -26,21 +26,28 @@ export function PriceBreakdown({
       {showPerUnit && (
         <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500 py-1 border-b border-dashed border-gray-200 dark:border-gray-700 mb-2">
           <span>Lote: {cantidad} unidades</span>
-          <span>{prices.gramosTotales.toFixed(1)}g · {prices.horasTotales.toFixed(2)}hs total</span>
+          <span>{Math.round(prices.gramosTotales)}g · {formatDecimalHours(prices.horasTotales)} total</span>
         </div>
       )}
 
       {/* Costos */}
       <Row
-        label={`Material${filamentWeight ? ` (${prices.gramosTotales.toFixed(1)}g ${filamentType})` : ""}`}
+        label={`Material${filamentWeight ? ` (${Math.round(prices.gramosTotales)}g ${filamentType})` : ""}`}
         value={formatARS(prices.costoMaterial)}
       />
       <Row
-        label={`Electricidad (${prices.horasTotales.toFixed(2)}hs)`}
+        label={`Electricidad (${formatDecimalHours(prices.horasTotales)})`}
         value={formatARS(prices.costoElectricidad)}
       />
       <Row label="Repuestos/mantenimiento" value={formatARS(prices.costoRepuestos)} />
       <Row label={`Packaging (×${cantidad})`} value={formatARS(prices.costoPackaging)} />
+      {/* Los productos guardados antes de que existiera mano de obra no traen el campo. */}
+      {prices.costoManoObra > 0 && (
+        <Row
+          label={`Mano de obra (${formatDecimalHours(prices.horasManoObra)} de post-proceso)`}
+          value={formatARS(prices.costoManoObra)}
+        />
+      )}
 
       <div className="flex justify-between py-2 font-semibold border-t border-gray-200 dark:border-gray-700 mt-1">
         <span className="text-gray-700 dark:text-gray-300">Costo base</span>

@@ -4,7 +4,7 @@ export interface CalculationParams {
   cantidad: number;
   printTimeHours: number;
   printTimeMinutes: number;
-  filamentWeight: number; // gramos por unidad
+  filamentWeight: number; // gramos enteros por unidad, incluye soportes y purga
   filamentType: FilamentType;
   filamentTypeCustom?: string;
   filamentPricePerKg: number;
@@ -13,6 +13,8 @@ export interface CalculationParams {
   vidaUtilHoras: number;   // vida útil impresora en horas
   precioRepuestos: number; // costo total de repuestos/mantenimiento
   packaging: number;       // packaging por unidad
+  laborCostPerHour: number;   // costo de tu hora de trabajo
+  postProcessMinutes: number; // minutos de post-proceso por unidad
   margenErrorPct: number;  // margen de error %
   profitPercentage: number; // margen de ganancia %
   shippingCost: number;
@@ -21,10 +23,12 @@ export interface CalculationParams {
 export interface CalculatedPrices {
   gramosTotales: number;
   horasTotales: number;
+  horasManoObra: number;
   costoMaterial: number;
   costoElectricidad: number;
   costoRepuestos: number;
   costoPackaging: number;
+  costoManoObra: number;
   costoBase: number;
   costoConError: number;
   precioConMarkup: number;
@@ -55,6 +59,8 @@ export interface Product {
   vidaUtilHoras: number;
   precioRepuestos: number;
   packaging: number;
+  laborCostPerHour: number;
+  postProcessMinutes: number;
   margenErrorPct: number;
   profitPercentage: number;
   shippingCost: number;
@@ -73,6 +79,8 @@ export interface UserSettings {
   precioRepuestos: number;
   margenErrorPct: number;
   packaging: number;
+  laborCostPerHour: number;
+  postProcessMinutes: number;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -83,4 +91,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
   precioRepuestos: 15000,
   margenErrorPct: 10,
   packaging: 2300,
+  laborCostPerHour: 0,
+  postProcessMinutes: 0,
 };

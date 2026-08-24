@@ -21,7 +21,9 @@ export async function getUserSettings(uid: string): Promise<UserSettings> {
   const ref = doc(db, "users", uid, "data", "settings");
   const snap = await getDoc(ref);
   if (!snap.exists()) return DEFAULT_SETTINGS;
-  return snap.data() as UserSettings;
+  // Merge sobre los defaults: una cuenta creada antes de que existiera un campo
+  // no lo tiene guardado y llegaría como undefined.
+  return { ...DEFAULT_SETTINGS, ...(snap.data() as Partial<UserSettings>) };
 }
 
 export async function saveUserSettings(uid: string, settings: UserSettings): Promise<void> {

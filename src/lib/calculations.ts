@@ -12,6 +12,8 @@ export function calculatePrice(params: CalculationParams): CalculatedPrices {
     vidaUtilHoras,
     precioRepuestos,
     packaging,
+    laborCostPerHour = 0,
+    postProcessMinutes = 0,
     margenErrorPct,
     profitPercentage,
     shippingCost = 0,
@@ -36,32 +38,41 @@ export function calculatePrice(params: CalculationParams): CalculatedPrices {
   // 4. Packaging (por unidad)
   const costoPackaging = packaging * cantidadFinal;
 
-  // 5. Costo base
-  const costoBase = costoMaterial + costoElectricidad + costoRepuestos + costoPackaging;
+  // 5. Mano de obra: sólo el post-proceso (quitar soportes, lijar, pintar,
+  //    embalar). Las horas de impresión no cuentan porque la máquina trabaja
+  //    sola — eso ya se cobra vía electricidad y repuestos.
+  const horasManoObra = (postProcessMinutes / 60) * cantidadFinal;
+  const costoManoObra = horasManoObra * laborCostPerHour;
 
-  // 6. Margen de error
+  // 6. Costo base
+  const costoBase =
+    costoMaterial + costoElectricidad + costoRepuestos + costoPackaging + costoManoObra;
+
+  // 7. Margen de error
   const costoConError = costoBase * (1 + margenErrorPct / 100);
 
-  // 7A. Precio con markup sobre costo
+  // 8A. Precio con markup sobre costo
   const precioConMarkup = costoConError * (1 + profitPercentage / 100) + shippingCost;
 
-  // 7B. Precio con margen real (ganancia como % del precio de venta)
+  // 8B. Precio con margen real (ganancia como % del precio de venta)
   const precioConMargenReal =
     profitPercentage < 100
       ? costoConError / (1 - profitPercentage / 100) + shippingCost
       : 0;
 
-  // 8. Ganancias
+  // 9. Ganancias
   const gananciaMarkup = precioConMarkup - costoConError - shippingCost;
   const gananciaMargenReal = precioConMargenReal - costoConError - shippingCost;
 
   return {
     gramosTotales,
     horasTotales,
+    horasManoObra,
     costoMaterial,
     costoElectricidad,
     costoRepuestos,
     costoPackaging,
+    costoManoObra,
     costoBase,
     costoConError,
     precioConMarkup,
@@ -87,4 +98,14 @@ export function formatHours(hours: number, minutes: number): string {
   if (hours === 0) return `${minutes}min`;
   if (minutes === 0) return `${hours}h`;
   return `${hours}h ${minutes}min`;
+}
+
+/**
+ * Horas decimales → "1h 50min". El tiempo se carga como `1.50` (1h 50min), así
+ * que mostrar "1.83hs" se lee como si el cálculo estuviera mal. Nunca
+ * imprimimos horas decimales.
+ */
+export function formatDecimalHours(hours: number): string {
+  const totalMinutes = Math.round(hours * 60);
+  return formatHours(Math.floor(totalMinutes / 60), totalMinutes % 60);
 }
