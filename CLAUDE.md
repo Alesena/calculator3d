@@ -112,6 +112,41 @@ users/{uid}/
 `getUserSettings()` mergea sobre `DEFAULT_SETTINGS`: las cuentas creadas antes de que
 existiera un campo no lo tienen guardado y llegaría `undefined`.
 
+## Cotizador público para misintenciones3d.com (`/api/v1`)
+
+Spec: `INTEGRACION_IMPRICOST.md` (en el repo de la web, carpeta `ejemplos/`). La web
+analiza la malla en el navegador y manda sólo números; el precio se calcula acá.
+
+```
+src/lib/pricing/          → PURO (sin I/O, la fecha entra por parámetro)
+  types.ts               → PricingParams, QuoteInput, QuoteResult (con desglose interno)
+  calculate.ts           → calculateQuote(). Motor APARTE de calculatePrice(): no se tocan
+  defaults.ts            → versión 1 que se siembra si no hay parámetros
+  confirm.ts             → regla del tope (applyConfirmation) + control de precisión
+  public.ts              → StoredQuote + toPublicQuote/Tracking/Catalog (lista PERMITIDA)
+  validation.ts          → zod + catálogo, WhatsApp → E.164, CUIT, parámetros
+  time.ts                → horas hábiles y fechas en Buenos Aires (UTC−3 fijo)
+  messages.ts            → mensaje de WhatsApp que copia el admin
+src/lib/server/           → firebase-admin, pricingStore, quotesStore, ratelimit, http (CORS/errores), adminAuth
+app/api/v1/               → catalog · quotes · quotes/[id] (+request/accept/cancel) · admin/*
+app/cotizaciones/         → pedidos de la web, detalle + confirmar, precisión
+app/parametros/           → parámetros versionados (incluye el CRUD de materiales y colores)
+```
+
+- **Material**: si la web manda `areas_cm2` (lateral/techo/piso), la fracción sale del
+  modelo de cáscara (`shell.ts`); si no, de la fórmula de referencia de la spec
+  (`wall_fraction + (1 − wall_fraction)·infill`). Con esa, el caso 4.4 da exacto.
+- **Nunca** exponer desglose, costos, horas ni peso: toda respuesta pública pasa por
+  `toPublicQuote/Tracking/Catalog`, que arman el objeto campo por campo.
+- **Tope**: lo aplica el backend en `admin/quotes/:id/confirm` contra el `max_guaranteed`
+  guardado en la cotización (el que vio el cliente), no uno recalculado.
+- **Parámetros versionados**: `pricing_params/{version}` + `config/pricing`. Guardar crea
+  versión nueva; cada cotización guarda `pricing_version`. Cache de 60 s en memoria.
+- Firestore raíz (`quotes`, `pricing_params`, `config`): sólo Admin SDK. `firestore.rules`
+  no les da acceso de cliente (default deny) — no agregar reglas para ellas.
+- Datos personales de pedidos no concretados: se borran a los 90 días (cron diario en `vercel.json`).
+- Admin: Google login del dashboard → `Authorization: Bearer <idToken>` → UID en `IMPRICOST_ADMIN_UIDS`.
+
 ## Variables de entorno
 
 Completar en `.env.local`:
@@ -122,6 +157,18 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
 NEXT_PUBLIC_FIREBASE_APP_ID=
+
+# Cotizador público (/api/v1) — ver sección de arriba
+FIREBASE_ADMIN_PROJECT_ID=        # calculator3d-cabc4
+FIREBASE_ADMIN_CLIENT_EMAIL=
+FIREBASE_ADMIN_PRIVATE_KEY=       # una línea con 
+ literales, entre comillas
+IMPRICOST_ADMIN_UIDS=             # UIDs de Firebase Auth con acceso a /cotizaciones (coma)
+ALLOWED_ORIGINS=                  # https://misintenciones3d.com,https://www.misintenciones3d.com
+UPSTASH_REDIS_REST_URL=           # el mismo Upstash que la web (prefijo impricost:)
+UPSTASH_REDIS_REST_TOKEN=
+CRON_SECRET=                      # Vercel Cron → /api/v1/admin/cron/anonymize
+NEXT_PUBLIC_WEB_TRACKING_URL=     # default https://misintenciones3d.com/impresion-3d
 ```
 
 Las reglas de seguridad de Firestore están en `firestore.rules`.

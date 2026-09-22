@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut, Settings, LayoutDashboard, Calculator } from "lucide-react";
+import { LogOut, Settings, LayoutDashboard, Calculator, Inbox } from "lucide-react";
 import Image from "next/image";
 
 export function Header() {
@@ -13,6 +13,7 @@ export function Header() {
   const navItems = [
     { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
     { href: "/calculadora", label: "Calcular", icon: Calculator },
+    { href: "/cotizaciones", label: "Pedidos web", icon: Inbox },
     { href: "/configuracion", label: "Config", icon: Settings },
   ];
 
