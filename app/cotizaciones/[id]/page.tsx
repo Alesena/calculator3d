@@ -186,7 +186,10 @@ export default function CotizacionDetallePage({ params }: { params: Promise<{ id
                   <Row label="No entra: se imprime en" value={`${quote.result.split_parts} partes (estimado)`} />
                 )}
                 <Row label="Uso · material · calidad" value={`${quote.input.use} · ${quote.input.material} · ${quote.input.quality}`} />
-                <Row label="Color · cantidad" value={`${quote.input.color} · ${quote.input.quantity} u.`} />
+                <Row
+                  label={quote.input.colors && quote.input.colors.length > 1 ? "Colores · cantidad" : "Color · cantidad"}
+                  value={`${quote.input.colors && quote.input.colors.length > 1 ? quote.input.colors.join(" + ") : quote.input.color} · ${quote.input.quantity} u.`}
+                />
                 <Row label="Soportes" value={quote.result.supports} />
                 {quote.result.manual_review_reasons.length > 0 && (
                   <Row label="Revisión manual" value={quote.result.manual_review_reasons.join(", ")} />

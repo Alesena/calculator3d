@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateQuote, fitsPrinter, splitParts } from "@/src/lib/pricing/calculate";
+import { calculateQuote, colorCount, fitsPrinter, splitParts } from "@/src/lib/pricing/calculate";
 import { applyConfirmation, computeAccuracy } from "@/src/lib/pricing/confirm";
 import { DEFAULT_PLATE_MINUTES, DEFAULT_PRICING_PARAMS } from "@/src/lib/pricing/defaults";
 import { toPublicCatalog, toPublicQuote, type StoredQuote } from "@/src/lib/pricing/public";
@@ -127,6 +127,26 @@ describe("calculateQuote — reglas adicionales (spec 4.4)", () => {
     expect(splitParts([80, 45, 40], [256, 256, 256])).toBe(1);
     expect(splitParts([600, 300, 100], [256, 256, 256])).toBe(3 * 2);
     expect(splitParts([10, 700, 10], [256, 256, 256])).toBe(3); // prueba rotaciones
+  });
+  it("multicolor: cada color extra suma tiempo y material, y va a revisión", () => {
+    const mc = { max_colors: 4, extra_time: 0.1, extra_waste: 0.03, manual_review: true };
+    const one = calculateQuote(CASE_44, { ...SPEC, multicolor: mc }, NOW);
+    const three = calculateQuote({ ...CASE_44, colors: ["black", "white", "blue"] }, { ...SPEC, multicolor: mc }, NOW);
+    expect(three.breakdown.color_count).toBe(3);
+    expect(three.breakdown.hours).toBeCloseTo(one.breakdown.hours * 1.2, 6);
+    expect(three.breakdown.weight_g).toBeCloseTo(one.breakdown.weight_g * (1 + 0.05 + 0.06) / (1 + 0.05), 6);
+    expect(three.manual_review_reasons).toContain("multicolor");
+    expect(one.manual_review_reasons).not.toContain("multicolor");
+  });
+  it("multicolor: dos filamentos del mismo color son un solo color", () => {
+    expect(colorCount({ color: "black", colors: ["black", "black"] })).toBe(1);
+    const r = calculateQuote({ ...CASE_44, colors: ["black", "black"] }, SPEC, NOW);
+    expect(r.estimated_total).toBe(22750);
+  });
+  it("multicolor: sin revisión manual si se desactiva", () => {
+    const mc = { max_colors: 4, extra_time: 0.1, extra_waste: 0.03, manual_review: false };
+    const r = calculateQuote({ ...CASE_44, colors: ["black", "white"] }, { ...SPEC, multicolor: mc }, NOW);
+    expect(r.needs_manual_review).toBe(false);
   });
   it("prioridad: recargo y revisión manual", () => {
     const r = calculateQuote({ ...CASE_44, priority: true }, SPEC, NOW);

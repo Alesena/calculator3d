@@ -26,6 +26,14 @@ describe("validateQuoteBody", () => {
   it("acepta un pedido válido", () => {
     expect(validateQuoteBody(body, P).quantity).toBe(4);
   });
+  it("multicolor: acepta hasta max_colors distintos", () => {
+    expect(validateQuoteBody({ ...body, colors: ["black", "white", "blue", "clear"] }, P).colors).toHaveLength(4);
+    const params = structuredClone(P);
+    params.multicolor = { max_colors: 2, extra_time: 0.1, extra_waste: 0.03, manual_review: true };
+    expect(fieldOf(() => validateQuoteBody({ ...body, colors: ["black", "white", "blue"] }, params))).toBe("colors");
+    // Repetidos no cuentan como colores distintos.
+    expect(validateQuoteBody({ ...body, colors: ["black", "white", "black"] }, params).colors).toHaveLength(3);
+  });
   it("acepta piezas y camas", () => {
     const b = validateQuoteBody({ ...body, parts: 3, plates: 2 }, P);
     expect([b.parts, b.plates]).toEqual([3, 2]);
@@ -45,6 +53,8 @@ describe("validateQuoteBody", () => {
     [{ parts: 2.5 }, "parts"],
     [{ plates: 0 }, "plates"],
     [{ plates: 101 }, "plates"],
+    [{ colors: ["black", "red"] }, "colors"], // PETG no tiene rojo
+    [{ colors: [] }, "colors"],
   ])("rechaza %o", (patch, field) => {
     expect(fieldOf(() => validateQuoteBody({ ...body, ...patch }, P))).toBe(field);
   });

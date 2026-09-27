@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { PricingParams, QuoteInput } from "./types";
+import { DEFAULT_MULTICOLOR } from "./defaults";
 
 // Validación estricta de la entrada pública (spec §3). Dos capas:
 //   1. zod: forma y tipos.
@@ -29,6 +30,7 @@ export const quoteBodySchema = z.object({
   supports: z.string().min(1).max(40).optional(),
   quantity: z.number(),
   color: z.string().min(1).max(40),
+  colors: z.array(z.string().min(1).max(40)).min(1).max(16).optional(),
   priority: z.boolean().optional().default(false),
   file_name: z.string().max(200).optional().default(""),
   session_id: z.string().max(100).optional().default(""),
@@ -70,6 +72,17 @@ export function validateQuoteBody(raw: unknown, params: PricingParams): QuoteBod
   }
   if (!material.colors.some((c) => c.id === b.color && c.available)) {
     throw new ValidationError("color", "Ese color no está disponible para este material.");
+  }
+  if (b.colors) {
+    for (const id of b.colors) {
+      if (!material.colors.some((c) => c.id === id && c.available)) {
+        throw new ValidationError("colors", "Uno de los colores no está disponible para este material.");
+      }
+    }
+    const max = (params.multicolor ?? DEFAULT_MULTICOLOR).max_colors;
+    if (new Set(b.colors).size > max) {
+      throw new ValidationError("colors", `Imprimimos hasta ${max} colores por pieza.`);
+    }
   }
   return b;
 }
@@ -212,6 +225,12 @@ export const pricingParamsSchema = z.object({
   prep_minutes_per_order: money,
   plate_minutes: money.optional(),
   assembly_minutes: money.optional(),
+  multicolor: z.object({
+    max_colors: z.number().int().min(1).max(16),
+    extra_time: z.number().finite().min(0).max(5),
+    extra_waste: z.number().finite().min(0).max(5),
+    manual_review: z.boolean(),
+  }).optional(),
   markup: z.number().finite().min(0).max(20),
   min_order: money,
   priority_surcharge: z.number().finite().min(0).max(5),

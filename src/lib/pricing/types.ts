@@ -67,6 +67,17 @@ export interface ShellProfile {
   bottom_shell_layers: number;
 }
 
+export interface MulticolorParams {
+  /** Colores por pieza: cabezales de la impresora (Snapmaker U1: 4). */
+  max_colors: number;
+  /** Tiempo extra por cada color adicional (cambios de cabezal): 0,10 = +10 %. */
+  extra_time: number;
+  /** Material extra por cada color adicional (purga, torre): 0,05 = +5 %. */
+  extra_waste: number;
+  /** Mientras se calibra: toda pieza multicolor pasa por revisión manual. */
+  manual_review: boolean;
+}
+
 export interface BusinessHours {
   /** Informativo: el cálculo asume UTC−3 fijo (Argentina no tiene horario de verano). */
   tz: string;
@@ -107,6 +118,8 @@ export interface PricingParams {
    * en partes (pegar, lijar). Opcional como plate_minutes: DEFAULT_ASSEMBLY_MINUTES.
    */
   assembly_minutes?: number;
+  /** Impresión en varios colores (3MF pintado). Opcional: DEFAULT_MULTICOLOR. */
+  multicolor?: MulticolorParams;
   /** Markup sobre costo: 1 = +100 %. */
   markup: number;
   min_order: number;
@@ -144,7 +157,10 @@ export interface QuoteInput {
   plates?: number;
   supports?: string;
   quantity: number;
+  /** Color de una pieza de un solo color; en multicolor, el primero de `colors`. */
   color: string;
+  /** Multicolor: un color del catálogo por cada filamento del archivo. */
+  colors?: string[];
   priority?: boolean;
 }
 
@@ -173,6 +189,8 @@ export interface QuoteBreakdown {
   /** Partes en que se corta la pieza más grande si no entra (1 = entra) y su armado. */
   split_parts?: number;
   assembly_cost?: number;
+  /** Colores distintos de la pieza (1 = un color). */
+  color_count?: number;
   unit_cost: number;
   unit_list: number;
   qty_discount: number;
@@ -198,7 +216,7 @@ export interface QuoteResult {
   /** Si no entra: en cuántas partes se imprime (estimado; lo confirma una persona). 1 = entra. */
   split_parts: number;
   needs_manual_review: boolean;
-  manual_review_reasons: ("quantity" | "priority" | "does_not_fit")[];
+  manual_review_reasons: ("quantity" | "priority" | "does_not_fit" | "multicolor")[];
   savings_suggestions: SavingSuggestion[];
   assumptions: string[];
 }

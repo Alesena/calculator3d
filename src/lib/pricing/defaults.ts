@@ -1,4 +1,4 @@
-import type { ColorParams, PricingParams } from "./types";
+import type { ColorParams, MulticolorParams, PricingParams } from "./types";
 
 // Parámetros iniciales: la versión 1 que se siembra en Firestore si no hay
 // ninguna. Después se editan desde /parametros (cada edición = versión nueva).
@@ -11,6 +11,16 @@ import type { ColorParams, PricingParams } from "./types";
 export const DEFAULT_PLATE_MINUTES = 10;
 /** Minutos por unión de una pieza impresa en partes, si la versión no trae assembly_minutes. */
 export const DEFAULT_ASSEMBLY_MINUTES = 15;
+/**
+ * Multicolor si la versión no lo trae. Snapmaker U1: 4 cabezales, cambio de
+ * cabezal rápido y casi sin purga. Valores de arranque: calibrar con piezas reales.
+ */
+export const DEFAULT_MULTICOLOR: MulticolorParams = {
+  max_colors: 4,
+  extra_time: 0.1,
+  extra_waste: 0.03,
+  manual_review: true,
+};
 
 const c = (id: string, name: string, hex: string): ColorParams => ({ id, name, hex, available: true });
 
@@ -83,6 +93,7 @@ export const DEFAULT_PRICING_PARAMS: PricingParams = {
   prep_minutes_per_order: 15,
   plate_minutes: DEFAULT_PLATE_MINUTES,
   assembly_minutes: DEFAULT_ASSEMBLY_MINUTES,
+  multicolor: { ...DEFAULT_MULTICOLOR },
   markup: 1,
   min_order: 8000,
   priority_surcharge: 0.3,
