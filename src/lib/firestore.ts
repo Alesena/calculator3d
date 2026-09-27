@@ -8,12 +8,15 @@ import {
   getDoc,
   setDoc,
   query,
+  where,
   orderBy,
   serverTimestamp,
+  writeBatch,
+  deleteField,
   Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { Product, UserSettings, DEFAULT_SETTINGS, CalculationParams, CalculatedPrices } from "@/types";
+import { Category, Product, UserSettings, DEFAULT_SETTINGS, ProductInput, CalculatedPrices } from "@/types";
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 
@@ -65,7 +68,7 @@ function cleanParams<T extends object>(obj: T): Partial<T> {
 
 export async function createProduct(
   uid: string,
-  params: CalculationParams & { name: string; description?: string },
+  params: ProductInput,
   calculatedPrices: CalculatedPrices
 ): Promise<string> {
   const now = new Date();
@@ -84,12 +87,15 @@ export async function createProduct(
 export async function updateProduct(
   uid: string,
   productId: string,
-  params: CalculationParams & { name: string; description?: string },
+  params: ProductInput,
   calculatedPrices: CalculatedPrices
 ): Promise<void> {
   const ref = doc(db, "users", uid, "products", productId);
   await updateDoc(ref, {
     ...cleanParams(params),
+    // cleanParams descarta el undefined, así que sacar la categoría de un
+    // producto que ya la tenía necesita el borrado explícito.
+    categoryId: params.categoryId ?? deleteField(),
     calculatedPrices,
     updatedAt: serverTimestamp(),
   });
@@ -106,7 +112,7 @@ export async function duplicateProduct(uid: string, product: Product): Promise<s
   const now = new Date();
   const ref = collection(db, "users", uid, "products");
   const docRef = await addDoc(ref, {
-    ...data,
+    ...cleanParams(data),
     name: `${data.name} (copia)`,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -114,4 +120,52 @@ export async function duplicateProduct(uid: string, product: Product): Promise<s
     year: now.getFullYear(),
   });
   return docRef.id;
+}
+
+// ── Categorías ────────────────────────────────────────────────────────────────
+
+function toCategory(id: string, data: Record<string, unknown>): Category {
+  return {
+    id,
+    name: (data.name as string) ?? "",
+    createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
+    updatedAt: (data.updatedAt as Timestamp)?.toDate() ?? new Date(),
+  };
+}
+
+export async function getCategories(uid: string): Promise<Category[]> {
+  const ref = collection(db, "users", uid, "categories");
+  const snap = await getDocs(query(ref, orderBy("name")));
+  return snap.docs.map((d) => toCategory(d.id, d.data() as Record<string, unknown>));
+}
+
+export async function createCategory(uid: string, name: string): Promise<string> {
+  const ref = collection(db, "users", uid, "categories");
+  const docRef = await addDoc(ref, {
+    name: name.trim(),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function renameCategory(uid: string, categoryId: string, name: string): Promise<void> {
+  const ref = doc(db, "users", uid, "categories", categoryId);
+  await updateDoc(ref, { name: name.trim(), updatedAt: serverTimestamp() });
+}
+
+/**
+ * Borra la categoría y deja sin categoría a sus productos. Los productos NO se
+ * borran: la categoría es una etiqueta, no un contenedor.
+ * Devuelve cuántos productos quedaron sueltos.
+ */
+export async function deleteCategory(uid: string, categoryId: string): Promise<number> {
+  const products = await getDocs(
+    query(collection(db, "users", uid, "products"), where("categoryId", "==", categoryId))
+  );
+  const batch = writeBatch(db);
+  products.docs.forEach((d) => batch.update(d.ref, { categoryId: deleteField() }));
+  batch.delete(doc(db, "users", uid, "categories", categoryId));
+  await batch.commit();
+  return products.size;
 }

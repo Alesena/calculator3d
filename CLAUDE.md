@@ -28,14 +28,15 @@ npm test         # Vitest (capa de cálculo + parsers, sin DOM salvo integració
 app/
   page.tsx               → Redirect a /login o /dashboard según auth
   login/page.tsx         → Pantalla de login con Google
-  dashboard/page.tsx     → Lista de productos + estadísticas
+  dashboard/page.tsx     → Sólo categorías; los productos aparecen al entrar en una
+                           (?cat=<id>, ?cat=none = sin categoría)
   calculadora/page.tsx   → Formulario de cálculo + resultado
   productos/[id]/page.tsx→ Detalle de producto
   configuracion/page.tsx → Valores por defecto del usuario
   (app)/                 → Carpeta vacía (no usar — el auth está en AppShell)
 
 src/
-  types/index.ts         → Tipos: Product, UserSettings, CalculationParams, CalculatedPrices
+  types/index.ts         → Tipos: Product, Category, UserSettings, CalculationParams, CalculatedPrices
   lib/
     firebase.ts          → Init de Firebase (lee env vars NEXT_PUBLIC_FIREBASE_*)
     firestore.ts         → CRUD: getProducts, createProduct, updateProduct, deleteProduct, duplicateProduct, getUserSettings, saveUserSettings
@@ -48,6 +49,7 @@ src/
   hooks/
     useProducts.ts       → useProducts(uid) → { products, loading, refetch, remove, duplicate }
     useSettings.ts       → useSettings(uid) → { settings, loading, save }
+    useCategories.ts     → useCategories(uid) → { categories, loading, refetch, create, rename, remove }
   components/
     layout/
       AppShell.tsx       → Wrapper de auth: redirige a /login si no hay sesión, muestra Header + FAB móvil
@@ -55,12 +57,16 @@ src/
     calculator/
       CalculatorForm.tsx → Formulario completo con secciones: básicos, material, electricidad, repuestos, mano de obra, ganancia
       ThreeMFImporter.tsx→ Importa .3mf/.gcode y precarga peso y tiempo en el formulario
+    categories/
+      CategorySelect.tsx → Select de categoría + creación al vuelo (usado en el formulario)
     products/
       ProductCard.tsx    → Tarjeta con acciones: editar, duplicar, eliminar (con confirm dialog)
       PriceBreakdown.tsx → Desglose de costos con precio final destacado
     ui/
       Skeleton.tsx       → Skeleton loaders para cards y stats
       ConfirmDialog.tsx  → Modal de confirmación para eliminar
+      PromptDialog.tsx   → Modal con un input (crear/renombrar categoría). Va por portal:
+                           trae su propio <form> y se usa dentro del form de la calculadora
 ```
 
 ## Capa de impresión (`src/lib/print/`)
@@ -97,7 +103,7 @@ de magnitud, no como dato.
 
 1. `AppShell` verifica auth en cliente → si no hay user, redirige a `/login`
 2. `useAuth()` expone el usuario de Firebase Auth
-3. Cada hook (`useProducts`, `useSettings`) recibe `uid` y opera sobre `users/{uid}/products` y `users/{uid}/data/settings` en Firestore
+3. Cada hook (`useProducts`, `useSettings`, `useCategories`) recibe `uid` y opera sobre `users/{uid}/products`, `users/{uid}/data/settings` y `users/{uid}/categories` en Firestore
 4. `calculatePrice(params)` es una función pura en `lib/calculations.ts` que devuelve `CalculatedPrices`
 5. Al guardar, se llama `createProduct` / `updateProduct` en Firestore con los params y los precios calculados
 
@@ -105,9 +111,17 @@ de magnitud, no como dato.
 
 ```
 users/{uid}/
+  categories/{id}   → Category { name, createdAt, updatedAt }
   data/settings     → UserSettings { electricityPrice, printerWatts, profitPercentage, vidaUtilHoras, precioRepuestos, margenErrorPct, packaging, laborCostPerHour, postProcessMinutes }
-  products/{id}     → Product { name, description?, cantidad, printTimeHours, printTimeMinutes, filamentWeight, filamentType, filamentTypeCustom?, filamentPricePerKg, printerWatts, electricityPrice, vidaUtilHoras, precioRepuestos, packaging, laborCostPerHour, postProcessMinutes, margenErrorPct, profitPercentage, shippingCost, calculatedPrices: {...}, month, year, createdAt, updatedAt }
+  products/{id}     → Product { name, description?, categoryId?, cantidad, printTimeHours, printTimeMinutes, filamentWeight, filamentType, filamentTypeCustom?, filamentPricePerKg, printerWatts, electricityPrice, vidaUtilHoras, precioRepuestos, packaging, laborCostPerHour, postProcessMinutes, margenErrorPct, profitPercentage, shippingCost, calculatedPrices: {...}, month, year, createdAt, updatedAt }
 ```
+
+`categoryId` es opcional a propósito: los productos guardados antes de que existieran las
+categorías, y los de una categoría borrada, no lo tienen. En la UI son "Sin categoría"
+(`?cat=none` en el dashboard), no un error. Borrar una categoría **no borra sus productos**:
+`deleteCategory()` les saca el campo con `deleteField()` en un batch. Por eso `updateProduct()`
+escribe `categoryId: deleteField()` cuando el form no manda ninguna — `cleanParams` descarta
+los `undefined` y, sin eso, sacarle la categoría a un producto no tendría efecto.
 
 `getUserSettings()` mergea sobre `DEFAULT_SETTINGS`: las cuentas creadas antes de que
 existiera un campo no lo tienen guardado y llegaría `undefined`.
