@@ -211,6 +211,7 @@ export const pricingParamsSchema = z.object({
   labor_per_h: money,
   prep_minutes_per_order: money,
   plate_minutes: money.optional(),
+  assembly_minutes: money.optional(),
   markup: z.number().finite().min(0).max(20),
   min_order: money,
   priority_surcharge: z.number().finite().min(0).max(5),

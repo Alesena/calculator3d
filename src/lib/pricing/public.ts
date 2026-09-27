@@ -64,6 +64,8 @@ export function toPublicQuote(q: StoredQuote) {
     vat_included: r.vat_included,
     valid_until: r.valid_until,
     fits_printer: r.fits_printer,
+    // Las cotizaciones guardadas antes de existir el campo no lo tienen.
+    split_parts: r.split_parts ?? 1,
     needs_manual_review: r.needs_manual_review,
     manual_review_reasons: [...r.manual_review_reasons],
     savings_suggestions: r.savings_suggestions.map((s) => ({

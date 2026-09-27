@@ -102,6 +102,11 @@ export interface PricingParams {
    * usan DEFAULT_PLATE_MINUTES.
    */
   plate_minutes?: number;
+  /**
+   * Minutos de trabajo por cada unión cuando una pieza no entra y se imprime
+   * en partes (pegar, lijar). Opcional como plate_minutes: DEFAULT_ASSEMBLY_MINUTES.
+   */
+  assembly_minutes?: number;
   /** Markup sobre costo: 1 = +100 %. */
   markup: number;
   min_order: number;
@@ -165,6 +170,9 @@ export interface QuoteBreakdown {
   /** Camas por unidad y costo de las extra. Las cotizaciones viejas no los tienen. */
   plates?: number;
   plate_cost?: number;
+  /** Partes en que se corta la pieza más grande si no entra (1 = entra) y su armado. */
+  split_parts?: number;
+  assembly_cost?: number;
   unit_cost: number;
   unit_list: number;
   qty_discount: number;
@@ -187,6 +195,8 @@ export interface QuoteResult {
   vat_included: boolean;
   valid_until: string; // YYYY-MM-DD
   fits_printer: boolean;
+  /** Si no entra: en cuántas partes se imprime (estimado; lo confirma una persona). 1 = entra. */
+  split_parts: number;
   needs_manual_review: boolean;
   manual_review_reasons: ("quantity" | "priority" | "does_not_fit")[];
   savings_suggestions: SavingSuggestion[];

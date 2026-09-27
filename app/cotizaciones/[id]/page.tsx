@@ -39,6 +39,7 @@ const BREAKDOWN_ROWS: { key: keyof QuoteBreakdown; label: string; fmt: (n: numbe
   { key: "post_cost", label: "Post-proceso", fmt: fmtPesos },
   { key: "failure_cost", label: "Fallas", fmt: fmtPesos },
   { key: "plate_cost", label: "Camas extra", fmt: fmtPesos },
+  { key: "assembly_cost", label: "Armado (pieza en partes)", fmt: fmtPesos },
   { key: "unit_cost", label: "Costo unitario", fmt: fmtPesos },
   { key: "unit_list", label: "Precio de lista unitario", fmt: fmtPesos },
   { key: "qty_discount", label: "Descuento por cantidad", fmt: (n) => `${(n * 100).toFixed(0)} %` },
@@ -180,6 +181,9 @@ export default function CotizacionDetallePage({ params }: { params: Promise<{ id
                 <Row label="Volumen" value={`${quote.input.volume_cm3} cm³`} />
                 {((quote.input.parts ?? 1) > 1 || (quote.input.plates ?? 1) > 1) && (
                   <Row label="Piezas · camas por unidad" value={`${quote.input.parts ?? 1} · ${quote.input.plates ?? 1}`} />
+                )}
+                {(quote.result.split_parts ?? 1) > 1 && (
+                  <Row label="No entra: se imprime en" value={`${quote.result.split_parts} partes (estimado)`} />
                 )}
                 <Row label="Uso · material · calidad" value={`${quote.input.use} · ${quote.input.material} · ${quote.input.quality}`} />
                 <Row label="Color · cantidad" value={`${quote.input.color} · ${quote.input.quantity} u.`} />

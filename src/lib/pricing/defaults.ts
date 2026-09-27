@@ -9,6 +9,8 @@ import type { ColorParams, PricingParams } from "./types";
 
 /** Minutos por cama extra cuando la versión de parámetros no trae plate_minutes. */
 export const DEFAULT_PLATE_MINUTES = 10;
+/** Minutos por unión de una pieza impresa en partes, si la versión no trae assembly_minutes. */
+export const DEFAULT_ASSEMBLY_MINUTES = 15;
 
 const c = (id: string, name: string, hex: string): ColorParams => ({ id, name, hex, available: true });
 
@@ -80,6 +82,7 @@ export const DEFAULT_PRICING_PARAMS: PricingParams = {
   labor_per_h: 7000,
   prep_minutes_per_order: 15,
   plate_minutes: DEFAULT_PLATE_MINUTES,
+  assembly_minutes: DEFAULT_ASSEMBLY_MINUTES,
   markup: 1,
   min_order: 8000,
   priority_surcharge: 0.3,
