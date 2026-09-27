@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCategories } from "@/hooks/useCategories";
 import { getProduct, deleteProduct, duplicateProduct } from "@/lib/firestore";
 import { Product } from "@/types";
 import { AppShell } from "@/components/layout/AppShell";
@@ -17,6 +18,7 @@ import toast from "react-hot-toast";
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const { categories } = useCategories(user?.uid);
   const router = useRouter();
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -65,6 +67,8 @@ export default function ProductDetailPage() {
     }
   };
 
+  const categoryName = categories.find((c) => c.id === product?.categoryId)?.name;
+
   const filamentLabel =
     product?.filamentType === "Otro" && product.filamentTypeCustom
       ? product.filamentTypeCustom
@@ -99,6 +103,14 @@ export default function ProductDetailPage() {
                 <span>📦 {product.cantidad} unidad{product.cantidad !== 1 ? "es" : ""}</span>
                 <span>⏱️ {formatHours(product.printTimeHours, product.printTimeMinutes)}/ud</span>
                 <span>📅 {product.createdAt.toLocaleDateString("es-AR")}</span>
+                {categoryName && (
+                  <Link
+                    href={`/dashboard?cat=${product.categoryId}`}
+                    className="text-orange-600 dark:text-orange-400 hover:underline"
+                  >
+                    🏷️ {categoryName}
+                  </Link>
+                )}
               </div>
             </div>
 

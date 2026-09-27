@@ -5,21 +5,29 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/hooks/useSettings";
+import { useCategories } from "@/hooks/useCategories";
 import { AppShell } from "@/components/layout/AppShell";
 import { CalculatorForm, CalculatorFormData } from "@/components/calculator/CalculatorForm";
 import { PriceBreakdown } from "@/components/products/PriceBreakdown";
 import { calculatePrice } from "@/lib/calculations";
 import { createProduct, updateProduct, getProduct } from "@/lib/firestore";
-import { CalculatedPrices, CalculationParams } from "@/types";
+import { CalculatedPrices, CalculationParams, ProductInput } from "@/types";
 import { ArrowLeft, Save, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 
 function CalculadoraContent() {
   const { user } = useAuth();
   const { settings, loading: settingsLoading } = useSettings(user?.uid);
+  const {
+    categories,
+    loading: categoriesLoading,
+    create: createCategory,
+  } = useCategories(user?.uid);
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
+  // Al venir desde una categoría del dashboard, el cálculo nuevo ya arranca ahí.
+  const presetCategoryId = searchParams.get("cat") ?? undefined;
 
   const [step, setStep] = useState<"form" | "result">("form");
   const [formData, setFormData] = useState<CalculatorFormData | null>(null);
@@ -45,6 +53,7 @@ function CalculadoraContent() {
         const fill = {
           name: p.name,
           description: p.description,
+          categoryId: p.categoryId,
           cantidad: p.cantidad,
           printTimeHours: p.printTimeHours,
           printTimeMinutes: p.printTimeMinutes,
@@ -88,7 +97,7 @@ function CalculadoraContent() {
     if (!user || !formData || !prices) return;
     setSaving(true);
     try {
-      const params = formData as CalculationParams & { name: string; description?: string };
+      const params = formData as ProductInput;
       if (editId) {
         console.log("[Save] updateProduct uid:", user.uid, "id:", editId);
         await updateProduct(user.uid, editId, params, prices);
@@ -128,12 +137,26 @@ function CalculadoraContent() {
       </div>
 
       {step === "form" ? (
-        <CalculatorForm defaultValues={prefill ?? undefined} settings={settings} onCalculate={handleCalculate} />
+        <CalculatorForm
+          defaultValues={prefill ?? (presetCategoryId ? { categoryId: presetCategoryId } : undefined)}
+          settings={settings}
+          categories={categories}
+          categoriesLoading={categoriesLoading}
+          onCreateCategory={createCategory}
+          onCalculate={handleCalculate}
+        />
       ) : (
         formData && prices && (
           <div className="space-y-4">
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <h2 className="font-bold text-gray-900 dark:text-white">📋 {formData.name}</h2>
+              <div>
+                <h2 className="font-bold text-gray-900 dark:text-white">📋 {formData.name}</h2>
+                {formData.categoryId && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {categories.find((c) => c.id === formData.categoryId)?.name ?? "Sin categoría"}
+                  </p>
+                )}
+              </div>
               <PriceBreakdown
                 prices={prices}
                 cantidad={formData.cantidad}

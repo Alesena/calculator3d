@@ -4,9 +4,10 @@ import { useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
-import { UserSettings, FilamentType } from "@/types";
+import { Category, UserSettings, FilamentType } from "@/types";
 import { ChevronDown } from "lucide-react";
 import { ThreeMFImporter } from "./ThreeMFImporter";
+import { CategorySelect } from "@/components/categories/CategorySelect";
 import {
   PRINT_TIME_ERROR,
   formatPrintTime,
@@ -18,6 +19,7 @@ import {
 const schema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
   description: z.string().optional(),
+  categoryId: z.string().optional(),
   cantidad: z.coerce.number().min(1, "Mínimo 1 unidad"),
   printTimeHours: z.coerce.number().min(0),
   printTimeMinutes: z.coerce.number().min(0).max(59),
@@ -44,6 +46,10 @@ export type CalculatorFormData = z.infer<typeof schema>;
 interface Props {
   defaultValues?: Partial<CalculatorFormData>;
   settings: UserSettings;
+  categories: Category[];
+  categoriesLoading?: boolean;
+  /** Crea una categoría desde el propio formulario y devuelve su id. */
+  onCreateCategory: (name: string) => Promise<string | null>;
   onCalculate: (data: CalculatorFormData) => void;
 }
 
@@ -73,7 +79,14 @@ const inputCls =
 const section =
   "bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4";
 
-export function CalculatorForm({ defaultValues, settings, onCalculate }: Props) {
+export function CalculatorForm({
+  defaultValues,
+  settings,
+  categories,
+  categoriesLoading,
+  onCreateCategory,
+  onCalculate,
+}: Props) {
   const initH = defaultValues?.printTimeHours ?? 0;
   const initM = defaultValues?.printTimeMinutes ?? 0;
   const [printTimeStr, setPrintTimeStr] = useState(() => formatPrintTime(initH, initM));
@@ -107,6 +120,7 @@ export function CalculatorForm({ defaultValues, settings, onCalculate }: Props) 
   });
 
   const filamentType = watch("filamentType");
+  const categoryId = watch("categoryId");
   const weightField = register("filamentWeight", { setValueAs: parseGrams });
 
   function handleFormSubmit(data: CalculatorFormData) {
@@ -146,6 +160,15 @@ export function CalculatorForm({ defaultValues, settings, onCalculate }: Props) 
         </Field>
         <Field label="Descripción (opcional)">
           <input {...register("description")} placeholder="Ej: Para interior, diseño moderno" className={inputCls} />
+        </Field>
+        <Field label="Categoría">
+          <CategorySelect
+            categories={categories}
+            loading={categoriesLoading}
+            value={categoryId}
+            onChange={(id) => setValue("categoryId", id, { shouldDirty: true })}
+            onCreate={onCreateCategory}
+          />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Cantidad (unidades)" error={errors.cantidad?.message}>
