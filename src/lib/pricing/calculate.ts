@@ -1,4 +1,5 @@
 import { estimateMaterialVolume } from "../print/shell";
+import { DEFAULT_ASSEMBLY_MINUTES, DEFAULT_MULTICOLOR, DEFAULT_PLATE_MINUTES } from "./defaults";
 import { localDatePlusDays } from "./time";
 import type {
   PricingParams, QuoteBreakdown, QuoteInput, QuoteResult, SavingSuggestion,
@@ -30,6 +31,22 @@ export function fitsPrinter(bbox: [number, number, number], max: [number, number
   const a = [...bbox].sort((x, y) => y - x);
   const b = [...max].sort((x, y) => y - x);
   return a.every((d, i) => d <= b[i]);
+}
+
+/**
+ * Partes en que hay que cortar una pieza para que entre: por cada lado (ordenados
+ * de mayor a menor, igual que fitsPrinter), cuántas veces entra el de la cama.
+ * 1 = entra entera.
+ */
+export function splitParts(bbox: [number, number, number], max: [number, number, number]): number {
+  const a = [...bbox].sort((x, y) => y - x);
+  const b = [...max].sort((x, y) => y - x);
+  return a.reduce((n, d, i) => n * Math.max(1, Math.ceil(d / b[i])), 1);
+}
+
+/** Colores distintos que usa la pieza: dos filamentos del mismo color son un solo cabezal. */
+export function colorCount(input: Pick<QuoteInput, "color" | "colors">): number {
+  return input.colors?.length ? new Set(input.colors).size : 1;
 }
 
 export function quantityDiscount(quantity: number, tiers: PricingParams["quantity_tiers"]): number {
@@ -89,14 +106,25 @@ function core(input: QuoteInput, params: PricingParams, supportsId: string): Cor
 
   const m = params.machine;
   const extrusion_cm3 = input.volume_cm3 * solid_fraction * (1 + supports.extra);
-  const weight_g = extrusion_cm3 * material.density * (1 + material.waste);
-  const hours = extrusion_cm3 / quality.speed_cm3_h;
+  // Multicolor: cada color extra suma cambios de cabezal (tiempo) y purga (material).
+  const mc = params.multicolor ?? DEFAULT_MULTICOLOR;
+  const color_count = colorCount(input);
+  const extra_colors = color_count - 1;
+  const weight_g = extrusion_cm3 * material.density * (1 + material.waste + mc.extra_waste * extra_colors);
+  const hours = (extrusion_cm3 / quality.speed_cm3_h) * (1 + mc.extra_time * extra_colors);
   const machine_hour = m.printer_price / m.lifetime_h + m.power_kw * m.kwh_price + m.maintenance_per_h;
   const material_cost = (weight_g / 1000) * material.price_per_kg;
   const machine_cost = hours * machine_hour * (1 + material.surcharge);
   const post_cost = (supports.post_min / 60) * params.labor_per_h;
   const failure_cost = (material_cost + machine_cost) * m.failure_rate;
-  const unit_cost = material_cost + machine_cost + post_cost + failure_cost;
+  // La primera cama va en la preparación del pedido; cada cama extra de la
+  // unidad es trabajo: sacar la pieza, limpiar y relanzar.
+  const plates = input.plates ?? 1;
+  const plate_cost = ((plates - 1) * (params.plate_minutes ?? DEFAULT_PLATE_MINUTES) / 60) * params.labor_per_h;
+  // Si no entra, se imprime en partes y se pega: cada unión es trabajo.
+  const split_parts = splitParts(input.bbox_mm, params.printer_max_mm);
+  const assembly_cost = ((split_parts - 1) * (params.assembly_minutes ?? DEFAULT_ASSEMBLY_MINUTES) / 60) * params.labor_per_h;
+  const unit_cost = material_cost + machine_cost + post_cost + failure_cost + plate_cost + assembly_cost;
 
   // ── Pedido (§4.3) ──
   const unit_list = unit_cost * (1 + params.markup);
@@ -110,7 +138,8 @@ function core(input: QuoteInput, params: PricingParams, supportsId: string): Cor
   return {
     breakdown: {
       material_model, solid_fraction, extrusion_cm3, weight_g, hours, machine_hour,
-      material_cost, machine_cost, post_cost, failure_cost, unit_cost, unit_list,
+      material_cost, machine_cost, post_cost, failure_cost, plates, plate_cost, split_parts, assembly_cost,
+      color_count, unit_cost, unit_list,
       qty_discount, parts_subtotal, setup, priority_amt, vat_amt, raw_total,
     },
     estimated_total: roundTo(Math.max(raw_total, params.min_order), params.rounding),
@@ -164,6 +193,9 @@ export function calculateQuote(input: QuoteInput, params: PricingParams, now: Da
   if (input.quantity >= params.manual_review_from_qty) reasons.push("quantity");
   if (input.priority) reasons.push("priority");
   if (!fits) reasons.push("does_not_fit");
+  if ((breakdown.color_count ?? 1) > 1 && (params.multicolor ?? DEFAULT_MULTICOLOR).manual_review) {
+    reasons.push("multicolor");
+  }
 
   return {
     breakdown,
@@ -180,6 +212,7 @@ export function calculateQuote(input: QuoteInput, params: PricingParams, now: Da
     vat_included: params.vat.enabled,
     valid_until: localDatePlusDays(now, params.validity_days),
     fits_printer: fits,
+    split_parts: breakdown.split_parts ?? 1,
     needs_manual_review: reasons.length > 0,
     manual_review_reasons: reasons,
     savings_suggestions: savings(input, params, supportsId, estimated_total),

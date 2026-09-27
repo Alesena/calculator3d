@@ -8,7 +8,11 @@ import { AppShell } from "@/components/layout/AppShell";
 import { useAuth } from "@/contexts/AuthContext";
 import { adminFetch, AdminApiError } from "@/lib/adminApi";
 import type { PricingParams } from "@/lib/pricing/types";
+import { DEFAULT_ASSEMBLY_MINUTES, DEFAULT_MULTICOLOR, DEFAULT_PLATE_MINUTES } from "@/lib/pricing/defaults";
 import { btnGhost, btnPrimary, cardCls, h1Cls, inputCls, mutedCls } from "@/components/quotes/styles";
+
+/** Las versiones de parámetros anteriores al multicolor no lo traen. */
+const mcOf = (p: PricingParams) => p.multicolor ?? DEFAULT_MULTICOLOR;
 
 // Parámetros del cotizador de la web: materiales y colores (catálogo), usos,
 // calidades y todas las reglas de precio. Guardar crea una VERSIÓN NUEVA; cada
@@ -288,6 +292,8 @@ export default function ParametrosPage() {
                 <Num label="Pedido mínimo ($)" value={p.min_order} onChange={(v) => edit((d) => { d.min_order = v; })} />
                 <Num label="Hora de trabajo ($)" value={p.labor_per_h} onChange={(v) => edit((d) => { d.labor_per_h = v; })} />
                 <Num label="Preparación por pedido (min)" value={p.prep_minutes_per_order} onChange={(v) => edit((d) => { d.prep_minutes_per_order = v; })} />
+                <Num label="Por cama extra (min)" value={p.plate_minutes ?? DEFAULT_PLATE_MINUTES} onChange={(v) => edit((d) => { d.plate_minutes = v; })} />
+                <Num label="Armado por unión (min)" value={p.assembly_minutes ?? DEFAULT_ASSEMBLY_MINUTES} onChange={(v) => edit((d) => { d.assembly_minutes = v; })} />
                 <Num label="Recargo prioridad" pct value={p.priority_surcharge} onChange={(v) => edit((d) => { d.priority_surcharge = v; })} />
                 <Num label="Descuento transferencia" pct value={p.transfer_discount} onChange={(v) => edit((d) => { d.transfer_discount = v; })} />
                 <Num label="Cuotas" step={1} value={p.installments.count} onChange={(v) => edit((d) => { d.installments.count = Math.round(v); })} />
@@ -300,6 +306,19 @@ export default function ParametrosPage() {
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={p.vat.enabled} onChange={(e) => edit((d) => { d.vat.enabled = e.target.checked; })} />
                 Sumar IVA al precio
+              </label>
+            </Section>
+
+            {/* ── Multicolor ── */}
+            <Section title="Multicolor" hint="Piezas 3MF pintadas. Los recargos son por cada color además del primero.">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <Num label="Colores máximos" step={1} value={mcOf(p).max_colors} onChange={(v) => edit((d) => { d.multicolor = { ...mcOf(d), max_colors: Math.round(v) }; })} />
+                <Num label="Tiempo extra por color" pct value={mcOf(p).extra_time} onChange={(v) => edit((d) => { d.multicolor = { ...mcOf(d), extra_time: v }; })} />
+                <Num label="Material extra por color" pct value={mcOf(p).extra_waste} onChange={(v) => edit((d) => { d.multicolor = { ...mcOf(d), extra_waste: v }; })} />
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={mcOf(p).manual_review} onChange={(e) => edit((d) => { d.multicolor = { ...mcOf(d), manual_review: e.target.checked }; })} />
+                Revisar a mano toda pieza multicolor (mientras se calibran los recargos)
               </label>
             </Section>
 

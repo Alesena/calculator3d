@@ -1,4 +1,5 @@
 import type { PricingParams, QuoteInput, QuoteResult } from "./types";
+import { DEFAULT_MULTICOLOR } from "./defaults";
 
 // Lo que sale por la API pública. Se ARMA campo por campo desde una lista
 // permitida (spec A7): nunca se hace un spread del resultado interno y se
@@ -64,6 +65,8 @@ export function toPublicQuote(q: StoredQuote) {
     vat_included: r.vat_included,
     valid_until: r.valid_until,
     fits_printer: r.fits_printer,
+    // Las cotizaciones guardadas antes de existir el campo no lo tienen.
+    split_parts: r.split_parts ?? 1,
     needs_manual_review: r.needs_manual_review,
     manual_review_reasons: [...r.manual_review_reasons],
     savings_suggestions: r.savings_suggestions.map((s) => ({
@@ -115,6 +118,7 @@ export function toPublicCatalog(params: PricingParams, version: number) {
     })),
     supports: params.supports.map((s) => ({ id: s.id, name: s.name })),
     printer_max_mm: [...params.printer_max_mm] as [number, number, number],
+    max_colors: (params.multicolor ?? DEFAULT_MULTICOLOR).max_colors,
     limits: { max_quantity: params.limits.max_quantity, max_volume_cm3: params.limits.max_volume_cm3 },
     pricing_version: version,
   };

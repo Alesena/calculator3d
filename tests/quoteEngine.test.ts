@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { calculateQuote, fitsPrinter } from "@/src/lib/pricing/calculate";
+import { calculateQuote, colorCount, fitsPrinter, splitParts } from "@/src/lib/pricing/calculate";
 import { applyConfirmation, computeAccuracy } from "@/src/lib/pricing/confirm";
-import { DEFAULT_PRICING_PARAMS } from "@/src/lib/pricing/defaults";
+import { DEFAULT_PLATE_MINUTES, DEFAULT_PRICING_PARAMS } from "@/src/lib/pricing/defaults";
 import { toPublicCatalog, toPublicQuote, type StoredQuote } from "@/src/lib/pricing/public";
 import type { PricingParams, QuoteInput } from "@/src/lib/pricing/types";
 
@@ -97,6 +97,57 @@ describe("calculateQuote — reglas adicionales (spec 4.4)", () => {
     expect(con.vat_included).toBe(true);
   });
 
+  it("camas: cada cama extra por unidad suma plate_minutes de trabajo", () => {
+    const one = calculateQuote(CASE_44, SPEC, NOW);
+    const three = calculateQuote({ ...CASE_44, parts: 4, plates: 3 }, { ...SPEC, plate_minutes: 12 }, NOW);
+    expect(one.breakdown.plate_cost).toBe(0);
+    expect(three.breakdown.plates).toBe(3);
+    expect(three.breakdown.plate_cost).toBeCloseTo((2 * 12 / 60) * SPEC.labor_per_h, 6);
+    expect(three.breakdown.unit_cost).toBeCloseTo(one.breakdown.unit_cost + three.breakdown.plate_cost!, 6);
+  });
+  it("camas: sin plate_minutes en los parámetros usa el valor por defecto", () => {
+    const { plate_minutes, ...old } = SPEC;
+    void plate_minutes;
+    const r = calculateQuote({ ...CASE_44, plates: 2 }, old, NOW);
+    expect(r.breakdown.plate_cost).toBeCloseTo((DEFAULT_PLATE_MINUTES / 60) * SPEC.labor_per_h, 6);
+  });
+  it("no entra: estima en cuántas partes se imprime y suma el armado", () => {
+    // 300 mm contra una cama de 256: 2 partes, una unión.
+    const big = calculateQuote({ ...CASE_44, bbox_mm: [300, 45, 40] }, { ...SPEC, assembly_minutes: 20 }, NOW);
+    expect(big.fits_printer).toBe(false);
+    expect(big.split_parts).toBe(2);
+    expect(big.breakdown.assembly_cost).toBeCloseTo((20 / 60) * SPEC.labor_per_h, 6);
+    expect(big.manual_review_reasons).toContain("does_not_fit");
+
+    const fits = calculateQuote(CASE_44, SPEC, NOW);
+    expect(fits.split_parts).toBe(1);
+    expect(fits.breakdown.assembly_cost).toBe(0);
+  });
+  it("splitParts multiplica los cortes de cada lado", () => {
+    expect(splitParts([80, 45, 40], [256, 256, 256])).toBe(1);
+    expect(splitParts([600, 300, 100], [256, 256, 256])).toBe(3 * 2);
+    expect(splitParts([10, 700, 10], [256, 256, 256])).toBe(3); // prueba rotaciones
+  });
+  it("multicolor: cada color extra suma tiempo y material, y va a revisión", () => {
+    const mc = { max_colors: 4, extra_time: 0.1, extra_waste: 0.03, manual_review: true };
+    const one = calculateQuote(CASE_44, { ...SPEC, multicolor: mc }, NOW);
+    const three = calculateQuote({ ...CASE_44, colors: ["black", "white", "blue"] }, { ...SPEC, multicolor: mc }, NOW);
+    expect(three.breakdown.color_count).toBe(3);
+    expect(three.breakdown.hours).toBeCloseTo(one.breakdown.hours * 1.2, 6);
+    expect(three.breakdown.weight_g).toBeCloseTo(one.breakdown.weight_g * (1 + 0.05 + 0.06) / (1 + 0.05), 6);
+    expect(three.manual_review_reasons).toContain("multicolor");
+    expect(one.manual_review_reasons).not.toContain("multicolor");
+  });
+  it("multicolor: dos filamentos del mismo color son un solo color", () => {
+    expect(colorCount({ color: "black", colors: ["black", "black"] })).toBe(1);
+    const r = calculateQuote({ ...CASE_44, colors: ["black", "black"] }, SPEC, NOW);
+    expect(r.estimated_total).toBe(22750);
+  });
+  it("multicolor: sin revisión manual si se desactiva", () => {
+    const mc = { max_colors: 4, extra_time: 0.1, extra_waste: 0.03, manual_review: false };
+    const r = calculateQuote({ ...CASE_44, colors: ["black", "white"] }, { ...SPEC, multicolor: mc }, NOW);
+    expect(r.needs_manual_review).toBe(false);
+  });
   it("prioridad: recargo y revisión manual", () => {
     const r = calculateQuote({ ...CASE_44, priority: true }, SPEC, NOW);
     expect(r.breakdown.priority_amt).toBeGreaterThan(0);
@@ -192,7 +243,7 @@ describe("respuesta pública", () => {
     expect(Object.keys(pub).sort()).toEqual([
       "assumptions", "currency", "estimated_total", "fits_printer", "installments", "manual_review_reasons",
       "max_guaranteed", "needs_manual_review", "pricing_version", "quantity_discount", "quote_id",
-      "savings_suggestions", "status", "transfer_price", "unit_price", "valid_until", "vat_included",
+      "savings_suggestions", "split_parts", "status", "transfer_price", "unit_price", "valid_until", "vat_included",
     ]);
   });
 
