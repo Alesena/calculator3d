@@ -71,7 +71,9 @@ export const DEFAULT_PRICING_PARAMS: PricingParams = {
     top_shell_layers: 5,
     bottom_shell_layers: 3,
   },
-  machine: { printer_price: 950000, lifetime_h: 4000, power_kw: 0.15, kwh_price: 180, maintenance_per_h: 120, failure_rate: 0.05 },
+  // Snapmaker U1 a ~16 h/día, amortizada en 1 año (5760 h): 200 W promedio
+  // imprimiendo PLA, kWh a ~$150. Hora de máquina ≈ $514.
+  machine: { printer_price: 2500000, lifetime_h: 5760, power_kw: 0.2, kwh_price: 150, maintenance_per_h: 50, failure_rate: 0.05 },
   labor_per_h: 7000,
   prep_minutes_per_order: 15,
   markup: 1,

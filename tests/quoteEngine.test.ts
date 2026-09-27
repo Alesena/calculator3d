@@ -6,13 +6,14 @@ import { toPublicCatalog, toPublicQuote, type StoredQuote } from "@/src/lib/pric
 import type { PricingParams, QuoteInput } from "@/src/lib/pricing/types";
 
 // Parámetros de la spec §4.1 (planilla de negocio), para el caso de referencia
-// 4.4. Difieren de DEFAULT_PRICING_PARAMS en precios por kg, IVA y tamaño.
+// 4.4. Difieren de DEFAULT_PRICING_PARAMS en precios por kg, máquina, IVA y tamaño.
 const SPEC: PricingParams = {
   ...structuredClone(DEFAULT_PRICING_PARAMS),
   materials: [
     { ...DEFAULT_PRICING_PARAMS.materials[0], price_per_kg: 25000, density: 1.24, waste: 0.05, surcharge: 0 },
     { ...DEFAULT_PRICING_PARAMS.materials[1], price_per_kg: 28000, density: 1.27, waste: 0.05, surcharge: 0 },
   ],
+  machine: { printer_price: 950000, lifetime_h: 4000, power_kw: 0.15, kwh_price: 180, maintenance_per_h: 120, failure_rate: 0.05 },
   vat: { enabled: false, rate: 0.21 },
   printer_max_mm: [256, 256, 256],
 };

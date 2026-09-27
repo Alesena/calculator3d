@@ -100,12 +100,14 @@ export interface UserSettings {
   postProcessMinutes: number;
 }
 
+// Snapmaker U1 a ~16 h/día: la impresora ($2.500.000) + ~$300.000 de repuestos
+// se amortizan en 1 año (5760 h) — igual que la máquina de la cotización web.
 export const DEFAULT_SETTINGS: UserSettings = {
-  electricityPrice: 45,
+  electricityPrice: 150,
   printerWatts: 200,
   profitPercentage: 30,
-  vidaUtilHoras: 4320,
-  precioRepuestos: 15000,
+  vidaUtilHoras: 5760,
+  precioRepuestos: 2800000,
   margenErrorPct: 10,
   packaging: 2300,
   laborCostPerHour: 0,
