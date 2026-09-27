@@ -38,6 +38,7 @@ const BREAKDOWN_ROWS: { key: keyof QuoteBreakdown; label: string; fmt: (n: numbe
   { key: "machine_cost", label: "Máquina", fmt: fmtPesos },
   { key: "post_cost", label: "Post-proceso", fmt: fmtPesos },
   { key: "failure_cost", label: "Fallas", fmt: fmtPesos },
+  { key: "plate_cost", label: "Camas extra", fmt: fmtPesos },
   { key: "unit_cost", label: "Costo unitario", fmt: fmtPesos },
   { key: "unit_list", label: "Precio de lista unitario", fmt: fmtPesos },
   { key: "qty_discount", label: "Descuento por cantidad", fmt: (n) => `${(n * 100).toFixed(0)} %` },
@@ -177,6 +178,9 @@ export default function CotizacionDetallePage({ params }: { params: Promise<{ id
                 <Row label="Archivo" value={quote.input.file_name || "—"} />
                 <Row label="Medidas" value={`${quote.input.bbox_mm.map((n) => Math.round(n)).join(" × ")} mm`} />
                 <Row label="Volumen" value={`${quote.input.volume_cm3} cm³`} />
+                {((quote.input.parts ?? 1) > 1 || (quote.input.plates ?? 1) > 1) && (
+                  <Row label="Piezas · camas por unidad" value={`${quote.input.parts ?? 1} · ${quote.input.plates ?? 1}`} />
+                )}
                 <Row label="Uso · material · calidad" value={`${quote.input.use} · ${quote.input.material} · ${quote.input.quality}`} />
                 <Row label="Color · cantidad" value={`${quote.input.color} · ${quote.input.quantity} u.`} />
                 <Row label="Soportes" value={quote.result.supports} />
@@ -191,7 +195,8 @@ export default function CotizacionDetallePage({ params }: { params: Promise<{ id
               <p className={`text-xs mb-2 ${mutedCls}`}>
                 Parámetros v{quote.pricing_version} · modelo de material: {quote.result.breakdown.material_model === "shell" ? "cáscara + núcleo" : "fórmula de referencia"}
               </p>
-              {BREAKDOWN_ROWS.map((r) => (
+              {/* Las cotizaciones viejas no tienen plate_cost: esa fila no se muestra. */}
+              {BREAKDOWN_ROWS.filter((r) => quote.result.breakdown[r.key] !== undefined).map((r) => (
                 <Row key={r.key} label={r.label} value={r.fmt(quote.result.breakdown[r.key] as number)} />
               ))}
               <div className="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">

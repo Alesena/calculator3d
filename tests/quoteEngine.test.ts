@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateQuote, fitsPrinter } from "@/src/lib/pricing/calculate";
 import { applyConfirmation, computeAccuracy } from "@/src/lib/pricing/confirm";
-import { DEFAULT_PRICING_PARAMS } from "@/src/lib/pricing/defaults";
+import { DEFAULT_PLATE_MINUTES, DEFAULT_PRICING_PARAMS } from "@/src/lib/pricing/defaults";
 import { toPublicCatalog, toPublicQuote, type StoredQuote } from "@/src/lib/pricing/public";
 import type { PricingParams, QuoteInput } from "@/src/lib/pricing/types";
 
@@ -97,6 +97,20 @@ describe("calculateQuote — reglas adicionales (spec 4.4)", () => {
     expect(con.vat_included).toBe(true);
   });
 
+  it("camas: cada cama extra por unidad suma plate_minutes de trabajo", () => {
+    const one = calculateQuote(CASE_44, SPEC, NOW);
+    const three = calculateQuote({ ...CASE_44, parts: 4, plates: 3 }, { ...SPEC, plate_minutes: 12 }, NOW);
+    expect(one.breakdown.plate_cost).toBe(0);
+    expect(three.breakdown.plates).toBe(3);
+    expect(three.breakdown.plate_cost).toBeCloseTo((2 * 12 / 60) * SPEC.labor_per_h, 6);
+    expect(three.breakdown.unit_cost).toBeCloseTo(one.breakdown.unit_cost + three.breakdown.plate_cost!, 6);
+  });
+  it("camas: sin plate_minutes en los parámetros usa el valor por defecto", () => {
+    const { plate_minutes, ...old } = SPEC;
+    void plate_minutes;
+    const r = calculateQuote({ ...CASE_44, plates: 2 }, old, NOW);
+    expect(r.breakdown.plate_cost).toBeCloseTo((DEFAULT_PLATE_MINUTES / 60) * SPEC.labor_per_h, 6);
+  });
   it("prioridad: recargo y revisión manual", () => {
     const r = calculateQuote({ ...CASE_44, priority: true }, SPEC, NOW);
     expect(r.breakdown.priority_amt).toBeGreaterThan(0);

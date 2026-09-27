@@ -7,6 +7,9 @@ import type { ColorParams, PricingParams } from "./types";
 // $25.000/kg, IVA sí, volumen máximo 270 mm (Snapmaker U1; la A1 es 256).
 // Colores: los que ofrecía /impresion-3d antes del cotizador.
 
+/** Minutos por cama extra cuando la versión de parámetros no trae plate_minutes. */
+export const DEFAULT_PLATE_MINUTES = 10;
+
 const c = (id: string, name: string, hex: string): ColorParams => ({ id, name, hex, available: true });
 
 // Funciones y no constantes: cada material necesita su propio objeto de color
@@ -76,6 +79,7 @@ export const DEFAULT_PRICING_PARAMS: PricingParams = {
   machine: { printer_price: 2500000, lifetime_h: 5760, power_kw: 0.2, kwh_price: 150, maintenance_per_h: 50, failure_rate: 0.05 },
   labor_per_h: 7000,
   prep_minutes_per_order: 15,
+  plate_minutes: DEFAULT_PLATE_MINUTES,
   markup: 1,
   min_order: 8000,
   priority_surcharge: 0.3,

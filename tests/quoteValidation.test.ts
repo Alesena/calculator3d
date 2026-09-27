@@ -26,6 +26,10 @@ describe("validateQuoteBody", () => {
   it("acepta un pedido válido", () => {
     expect(validateQuoteBody(body, P).quantity).toBe(4);
   });
+  it("acepta piezas y camas", () => {
+    const b = validateQuoteBody({ ...body, parts: 3, plates: 2 }, P);
+    expect([b.parts, b.plates]).toEqual([3, 2]);
+  });
   it.each([
     [{ quantity: 0 }, "quantity"],
     [{ quantity: 1.5 }, "quantity"],
@@ -37,6 +41,10 @@ describe("validateQuoteBody", () => {
     [{ color: "red" }, "color"], // PETG no tiene rojo
     [{ supports: "todos" }, "supports"],
     [{ use: "otro" }, "use"],
+    [{ parts: 0 }, "parts"],
+    [{ parts: 2.5 }, "parts"],
+    [{ plates: 0 }, "plates"],
+    [{ plates: 101 }, "plates"],
   ])("rechaza %o", (patch, field) => {
     expect(fieldOf(() => validateQuoteBody({ ...body, ...patch }, P))).toBe(field);
   });

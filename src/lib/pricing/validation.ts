@@ -24,6 +24,8 @@ export const quoteBodySchema = z.object({
     .object({ lateral: z.number().finite().min(0), top: z.number().finite().min(0), bottom: z.number().finite().min(0) })
     .optional(),
   bbox_mm: z.tuple([positive, positive, positive]),
+  parts: z.number().int().min(1).max(500).optional(),
+  plates: z.number().int().min(1).max(100).optional(),
   supports: z.string().min(1).max(40).optional(),
   quantity: z.number(),
   color: z.string().min(1).max(40),
@@ -39,6 +41,8 @@ const FIELD_MESSAGES: Record<string, string> = {
   volume_cm3: "El volumen de la pieza no es válido.",
   areas_cm2: "Las medidas de la pieza no son válidas.",
   quantity: "La cantidad no es válida.",
+  parts: "El archivo tiene más piezas de las que podemos cotizar al instante.",
+  plates: "El archivo ocupa más camas de las que podemos cotizar al instante.",
 };
 
 /** zod + catálogo. Devuelve el input listo para calculateQuote o tira ValidationError. */
@@ -206,6 +210,7 @@ export const pricingParamsSchema = z.object({
   }),
   labor_per_h: money,
   prep_minutes_per_order: money,
+  plate_minutes: money.optional(),
   markup: z.number().finite().min(0).max(20),
   min_order: money,
   priority_surcharge: z.number().finite().min(0).max(5),

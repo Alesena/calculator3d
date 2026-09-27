@@ -1,4 +1,5 @@
 import { estimateMaterialVolume } from "../print/shell";
+import { DEFAULT_PLATE_MINUTES } from "./defaults";
 import { localDatePlusDays } from "./time";
 import type {
   PricingParams, QuoteBreakdown, QuoteInput, QuoteResult, SavingSuggestion,
@@ -96,7 +97,11 @@ function core(input: QuoteInput, params: PricingParams, supportsId: string): Cor
   const machine_cost = hours * machine_hour * (1 + material.surcharge);
   const post_cost = (supports.post_min / 60) * params.labor_per_h;
   const failure_cost = (material_cost + machine_cost) * m.failure_rate;
-  const unit_cost = material_cost + machine_cost + post_cost + failure_cost;
+  // La primera cama va en la preparación del pedido; cada cama extra de la
+  // unidad es trabajo: sacar la pieza, limpiar y relanzar.
+  const plates = input.plates ?? 1;
+  const plate_cost = ((plates - 1) * (params.plate_minutes ?? DEFAULT_PLATE_MINUTES) / 60) * params.labor_per_h;
+  const unit_cost = material_cost + machine_cost + post_cost + failure_cost + plate_cost;
 
   // ── Pedido (§4.3) ──
   const unit_list = unit_cost * (1 + params.markup);
@@ -110,7 +115,7 @@ function core(input: QuoteInput, params: PricingParams, supportsId: string): Cor
   return {
     breakdown: {
       material_model, solid_fraction, extrusion_cm3, weight_g, hours, machine_hour,
-      material_cost, machine_cost, post_cost, failure_cost, unit_cost, unit_list,
+      material_cost, machine_cost, post_cost, failure_cost, plates, plate_cost, unit_cost, unit_list,
       qty_discount, parts_subtotal, setup, priority_amt, vat_amt, raw_total,
     },
     estimated_total: roundTo(Math.max(raw_total, params.min_order), params.rounding),

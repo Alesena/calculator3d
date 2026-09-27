@@ -96,6 +96,12 @@ export interface PricingParams {
   };
   labor_per_h: number;
   prep_minutes_per_order: number;
+  /**
+   * Minutos de trabajo por cada cama extra de una unidad (sacar, limpiar,
+   * relanzar). Opcional: las versiones de parámetros anteriores no lo tienen y
+   * usan DEFAULT_PLATE_MINUTES.
+   */
+  plate_minutes?: number;
   /** Markup sobre costo: 1 = +100 %. */
   markup: number;
   min_order: number;
@@ -122,7 +128,15 @@ export interface QuoteInput {
   volume_cm3: number;
   /** Superficie por orientación (cm²). Si falta, se usa la fórmula de referencia. */
   areas_cm2?: { lateral: number; top: number; bottom: number };
+  /**
+   * Con una sola parte, su caja. Con varias, la caja que contiene a cualquiera
+   * de ellas (ordenada de mayor a menor): entra en la impresora ⇔ entran todas.
+   */
   bbox_mm: [number, number, number];
+  /** Objetos separados en el archivo (1 si falta). Volumen y áreas son la suma. */
+  parts?: number;
+  /** Camas que ocupa una unidad (1 si falta). */
+  plates?: number;
   supports?: string;
   quantity: number;
   color: string;
@@ -148,6 +162,9 @@ export interface QuoteBreakdown {
   machine_cost: number;
   post_cost: number;
   failure_cost: number;
+  /** Camas por unidad y costo de las extra. Las cotizaciones viejas no los tienen. */
+  plates?: number;
+  plate_cost?: number;
   unit_cost: number;
   unit_list: number;
   qty_discount: number;

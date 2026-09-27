@@ -8,6 +8,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { useAuth } from "@/contexts/AuthContext";
 import { adminFetch, AdminApiError } from "@/lib/adminApi";
 import type { PricingParams } from "@/lib/pricing/types";
+import { DEFAULT_PLATE_MINUTES } from "@/lib/pricing/defaults";
 import { btnGhost, btnPrimary, cardCls, h1Cls, inputCls, mutedCls } from "@/components/quotes/styles";
 
 // Parámetros del cotizador de la web: materiales y colores (catálogo), usos,
@@ -288,6 +289,7 @@ export default function ParametrosPage() {
                 <Num label="Pedido mínimo ($)" value={p.min_order} onChange={(v) => edit((d) => { d.min_order = v; })} />
                 <Num label="Hora de trabajo ($)" value={p.labor_per_h} onChange={(v) => edit((d) => { d.labor_per_h = v; })} />
                 <Num label="Preparación por pedido (min)" value={p.prep_minutes_per_order} onChange={(v) => edit((d) => { d.prep_minutes_per_order = v; })} />
+                <Num label="Por cama extra (min)" value={p.plate_minutes ?? DEFAULT_PLATE_MINUTES} onChange={(v) => edit((d) => { d.plate_minutes = v; })} />
                 <Num label="Recargo prioridad" pct value={p.priority_surcharge} onChange={(v) => edit((d) => { d.priority_surcharge = v; })} />
                 <Num label="Descuento transferencia" pct value={p.transfer_discount} onChange={(v) => edit((d) => { d.transfer_discount = v; })} />
                 <Num label="Cuotas" step={1} value={p.installments.count} onChange={(v) => edit((d) => { d.installments.count = Math.round(v); })} />
